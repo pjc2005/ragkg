@@ -1,5 +1,12 @@
 # ragkg — Self-hosted RAG + Knowledge Graph Q&A
 
+<p align="center">
+  <img src="https://img.shields.io/github/stars/pjc2005/ragkg" alt="stars">
+  <img src="https://img.shields.io/badge/stack-FastAPI%20%2B%20PostgreSQL%2Fpgvector-blue" alt="stack">
+  <img src="https://img.shields.io/badge/LLM-llama.cpp%20%E6%9C%AC%E5%9C%B0-orange" alt="local-llm">
+  <img src="https://img.shields.io/badge/self--hosted-%E2%9C%93-green" alt="self-hosted">
+</p>
+
 > 仓库内的 `*.service` / `edge-worker/` / 各部署文档为**个人部署参考**——
 > 其中的域名、路径、用户名均以占位符或示例给出，部署时替换为你自己的环境。
 
@@ -7,8 +14,16 @@
 实体/关系三元组抽取 → 向量化 → PostgreSQL/pgvector 存储 → 混合检索
 （向量 + 关键词 + 图谱扩展）→ 本地 LLM 生成带引用的回答 → 浏览器图谱可视化。
 
+## 为什么用它
+
+- **数据不出本机**：文档、向量、问答全部本地，无云端依赖；
+- **RAG + KG 一步到位**：语义切片同时抽取实体/关系三元组，检索时做图谱扩展，
+  比纯向量检索更懂"关系"；
+- **回答带引用**：每个答案可回溯到来源文档与片段；
+- **图谱可视化**：浏览器直接点图下钻，适合把知识库"画出来"。
+
 全部组件可跑在一台常驻 Linux 服务器上（建议 GPU 显存 8G+，纯 CPU 亦可运行）；
-无需外网 LLM 依赖，数据不出本机，可经 Cloudflare Tunnel 等渠道从公网访问。
+无需外网 LLM 依赖，可经 Cloudflare Tunnel 等渠道从公网访问。
 
 ## 架构
 
@@ -128,3 +143,9 @@ python3 -m venv .venv && .venv/bin/pip install fastapi uvicorn psycopg pgvector 
 
 - 三个 LLM 服务共存约需 13GB+ 显存；显存较小可降低 `--ctx-size` 或换更小模型。
 - 备份策略按你自己的约定执行（如定期 rsync 到外部盘），不在仓库内。
+
+## 相关项目
+
+- [table-slice-parse](https://github.com/pjc2005/table-slice-parse) — 长表格截图切片解析为 CSV/Markdown（MinerU）
+- [Yanaa](https://github.com/pjc2005/Yanaa) — Android 本地 LLM 自动记账
+- [Kinon](https://github.com/pjc2005/Kinon) — Windows 快捷键查看工具
