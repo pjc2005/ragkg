@@ -29,8 +29,8 @@ sudo systemctl daemon-reload && sudo systemctl enable --now dashboard.service
 ## 指标内容
 - 系统: CPU型号+负载 / 内存型号+用量 / 磁盘(SSD/机械判定+型号, / /sda1 /sdb1) / uptime / 健康
 - 硬件: /proc/cpuinfo CPU型号 · dmidecode 内存(DDR4/速度/part) · lsblk ROTA 判定 SSD/机械 + model
-- GPU: P100 显存/利用率/温度/功耗(NVIDIA进程 9B+2B+嵌入)
-- 功耗: P100 即时功耗 + Intel RAPL CPU包功耗(需sudo读energy_uj) + 外围≈25W → 整机估算
+- GPU: GPU 显存/利用率/温度/功耗(NVIDIA进程 9B+2B+嵌入)
+- 功耗: GPU 即时功耗 + Intel RAPL CPU包功耗(需sudo读energy_uj) + 外围≈25W → 整机估算
 - 服务: llama-qa/embed/slice, mihomo, cloudflared, okx-a2a, mimirlink, filebrowser, rag, hermes-gateway
 - 端口: 8080/8998/8999/7890/8124/8123/5432 探活
 - 网络: mihomo 出口 IP

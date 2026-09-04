@@ -1,5 +1,5 @@
 /**
- * pj.js — YOUR_APP 边缘打点 (轻量, 非阻塞, 静默失败)
+ * pj.js — 边缘打点 (轻量, 非阻塞, 静默失败)
  * 用法: on each page include <script src="/pj.js"></script>
  *   window.pj('home')   一次页面浏览
  *   window.pj('ask')    一次 RAG 问答

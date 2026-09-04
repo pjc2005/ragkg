@@ -1,5 +1,5 @@
 [Unit]
-Description=YOUR_APP RAG (FastAPI + knowledge graph, <your-domain>)
+Description=RAG (FastAPI + knowledge graph, <your-domain>)
 After=network-online.target postgresql.service
 Wants=network-online.target
 StartLimitIntervalSec=60
