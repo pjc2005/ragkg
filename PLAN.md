@@ -1,7 +1,7 @@
 # 本地 RAG + 知识图谱可视化方案
 
 目标：本地知识库 → 语义切片 → 向量检索 + 知识图谱检索 → 问答；图谱在浏览器可视化。
-全部自托管在 `<your-project-path>`（Debian13 + P100 16G 常驻机）。
+全部自托管在一台常驻 Linux 服务器。
 
 ## 0. 架构总览
 
@@ -34,7 +34,7 @@ embedding模型  ──▶ pgvector 索引          ← PG 17
 | 组件 | 选择 | 说明 |
 |------|------|------|
 | 数据库 | PostgreSQL 17 + pgvector | apt: `postgresql-17` `postgresql-17-pgvector` |
-| 切片/抽取模型 | Qwen3-VL-2B (GGUF + mmproj) | llama-server 899 端口；2B 在 P100 毫无压力 |
+| 切片/抽取模型 | Qwen3-VL-2B (GGUF + mmproj) | llama-server :8999；2B 显存占用小 |
 | 向量模型 | bge-m3 (小 GGUF) | 专用于相似度（不要用聊天模型做 embedding）|
 | 后端 | FastAPI (uvicorn) | venv，ConnectorX/psycopg + pgvector |
 | 前端 | 单页 + vis-network | 本体里自带，无额外依赖 |
@@ -95,7 +95,7 @@ embedding模型  ──▶ pgvector 索引          ← PG 17
 - 8090 前端静态页
 
 ## 4. 备注 / 风险
-- 本机 P100 仅 16G，Qwen3.5-9B-Q8(9.8G)+embedding(R567MB) 同驻没问题；
+- GPU 16G 显存下 Qwen3.5-9B-Q8(9.8G)+embedding 同驻没问题；
   若要 Qwen3-VL-2B + 9B 回答模型同时跑需留意显存合计。
 - llama.cpp 对 Qwen3-VL 的 GGUF 支持当前是否稳定是主要不确定点，阶段 B 首批验证。
 - 图谱规模大时（成千节点）前端渲染与 pg 查询需加限制/分页。

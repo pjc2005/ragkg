@@ -25,7 +25,7 @@ from retrieve import retrieve
 from llm import answer_with_rag, QA_CHAT_URL
 from ingest import ingest_text
 
-app = FastAPI(title="YOUR_APP RAG", version="0.1")
+app = FastAPI(title="Self-hosted RAG", version="0.1")
 
 FILES_ROOT = Path("<your-project-path>/ragkg/files")
 UPLOAD_DIR = FILES_ROOT / "knowledge"

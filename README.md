@@ -1,14 +1,14 @@
-# ragkg — 自托管 RAG + 知识图谱问答系统
+# ragkg — Self-hosted RAG + Knowledge Graph Q&A
 
 > 仓库内的 `*.service` / `edge-worker/` / 各部署文档为**个人部署参考**——
 > 其中的域名、路径、用户名均以占位符或示例给出，部署时替换为你自己的环境。
 
-纯本地部署的知识库检索问答（RAG）+ 知识图谱（KG）系统：文档导入 → 语义切片 →
+一个可自托管的检索问答（RAG）+ 知识图谱（KG）系统：文档导入 → 语义切片 →
 实体/关系三元组抽取 → 向量化 → PostgreSQL/pgvector 存储 → 混合检索
 （向量 + 关键词 + 图谱扩展）→ 本地 LLM 生成带引用的回答 → 浏览器图谱可视化。
 
-全部组件自托管在一台 7×24 服务器（Debian 13 + Tesla P100 16G），可经
-Cloudflare Tunnel 从公网访问。
+全部组件可跑在一台常驻 Linux 服务器上（建议 GPU 显存 8G+，纯 CPU 亦可运行）；
+无需外网 LLM 依赖，数据不出本机，可经 Cloudflare Tunnel 等渠道从公网访问。
 
 ## 架构
 
@@ -16,36 +16,40 @@ Cloudflare Tunnel 从公网访问。
 文档(TXT/PDF/MD/图片)
       │
       ▼
-Qwen3-VL-2B (llama.cpp llama-server :8999)   ← 语义切片 + (实体,关系,实体) 抽取
+切片模型 (llama.cpp llama-server :8999)     ← 语义切片 + (实体,关系,实体) 抽取
       │
       ▼
-[chunks] [nodes/实体] [edges/关系]  ◀── PostgreSQL 17 + pgvector (hnsw)
+[chunks] [nodes/实体] [edges/关系]  ◀── PostgreSQL + pgvector (hnsw)
       │              │
       ▼              ▼
- bge-m3 embedding (:8998) ──▶ pgvector 向量索引 (1024 维)
+向量模型 (:8998) ──▶ pgvector 向量索引
       │
       ▼
 FastAPI 后端 (:8123)
-   混合检索: 向量 top-k + BM25/关键词 + 实体→邻居三元组扩展
+   混合检索: 向量 top-k + 关键词 + 实体→邻居三元组扩展
       │
       ▼
-Qwen3.5-9B (:8080) ──▶ 生成带引用来源的回答
+问答模型 (:8080) ──▶ 生成带引用来源的回答
       │
       ▼
 浏览器前端 (vis-network): 搜索 / 问答 / 图谱节点图（按实体类型着色）
 ```
 
-## 技术栈
+> 模型可替换为任意 OpenAI 兼容的本地 llama-server/其他服务：切片与抽取用一个
+> 多模态/通用小模型，向量用一个 embedding 模型（如 bge-m3），问答用一个稍大的
+> 对话模型。端口与模型名见下文参考配置。
 
-| 组件 | 选型 | 端口 |
+## 技术栈（参考配置）
+
+| 组件 | 选型（可按需替换） | 端口 |
 |------|------|------|
-| 数据库 | PostgreSQL 17 + pgvector 0.8（hnsw 索引） | 5432 |
+| 数据库 | PostgreSQL 17 + pgvector（hnsw 索引） | 5432 |
 | 切片/抽取模型 | Qwen3-VL-2B Q8 + mmproj（llama.cpp） | 8999 |
-| 向量模型 | bge-m3 Q8（1024 维，`--ubatch-size >= 2048`） | 8998 |
-| 回答模型 | Qwen3.5-9B Q8（`--reasoning off`） | 8080 |
+| 向量模型 | bge-m3 Q8（1024 维，需 `--ubatch-size >= 2048`） | 8998 |
+| 问答模型 | Qwen3.5-9B Q8（`--reasoning off`） | 8080 |
 | 后端 | FastAPI + uvicorn + psycopg + httpx | 8123 |
 | 前端 | 单页 HTML + vis-network（无构建依赖） | 8123 静态挂载 |
-| 公网 | Cloudflare Tunnel + Worker（edge） | - |
+| 公网 | Cloudflare Tunnel（可选） | - |
 
 ## 目录结构
 
@@ -54,7 +58,7 @@ app.py                  FastAPI 后端（API + 静态前端挂载）
 db.py                   PG 数据访问层（pgvector，表结构）
 llm.py                  llama-server OpenAI 兼容客户端（embed/chat/slice/extract/answer）
 ingest.py               文档导入管线：切片 → 抽取 → embedding → 写 PG
-retrieve.py             检索编排：向量检索 + 图谱子串匹配扩展
+retrieve.py             检索编排：向量检索 + 图谱扩展
 task_progress.py        长任务进度模块（供仪表盘轮询）
 scripts/
   deepseek_export.py    DeepSeek 对话导出 → 知识文档（再 /upload 导入）
@@ -62,7 +66,7 @@ scripts/
   refine_domain.py      领域/主题提炼
   restore_doc_files.py  从 chunks 重组缺失的原始文档
   task_bridge.py        后台任务实时桥接
-edge-worker/            Cloudflare Worker（<your-domain> 路由 / KV）
+edge-worker/            Cloudflare Worker（可选：访问统计 / 边缘服务，参考实现）
 web/                    前端页面（index / ui / graph / doc …）
 *.service               各 systemd 单元示例
 ```
@@ -78,7 +82,7 @@ sudo -u postgres createdb ragkg
 psql -d ragkg -c 'CREATE EXTENSION pgvector;'
 #   按 db.py 中的 DSN 建库 / 表（documents/chunks/nodes/edges/chunk_entities）
 
-# 2. 模型（三个 llama-server）
+# 2. 模型（三个 llama-server，参考配置）
 llama-server -m bge-m3-Q8.gguf  --embeddings --port 8998   # 向量
 llama-server -m Qwen3-VL-2B-Q8.gguf --mmproj <mmproj> --port 8999   # 切片/抽取
 llama-server -m Qwen3.5-9B-Q8.gguf --reasoning off --port 8080      # 回答
@@ -110,19 +114,17 @@ python3 -m venv .venv && .venv/bin/pip install fastapi uvicorn psycopg pgvector 
 ## 数据模型
 
 - `documents` — 文档元信息（标题/路径/状态）
-- `chunks` — 语义切片（text + embedding vector(1024)，hnsw 索引）
+- `chunks` — 语义切片（text + embedding vector，hnsw 索引）
 - `nodes` — 实体（name, type, description + embedding）
 - `edges` — (src, dst, relation) 三元组
 - `chunk_entities` — chunk ↔ 实体 关联
 
-## 项目状态
+## 实测参考（个人生产环境）
 
-已在生产运行：DeepSeek 全量会话导入（112 会话）、115 文档 / 3,784 节点 /
-1,921 边 / 3,258 chunks；图谱经精炼重建为 123 节点 / 122 边的领域图谱；
-已接入仪表盘长任务进度、移动端 UI、来源文档渲染。
+已长期运行：数百级文档 / 数千级节点/边的知识库正常检索问答；图谱支持
+主题化精炼重建；已接入长任务进度面板、移动端 UI、来源文档渲染。
 
 ## 备注
 
-- 三个 LLM 服务共存约占显存 13.4G/16G；9B 长回复时注意 KV 缓存 OOM
-  （已用 `--cache-type-k/v q8_0` 缓解），可降 `--ctx-size`。
-- 备份按约定手动 rsync 到机械盘，不在仓库内。
+- 三个 LLM 服务共存约需 13GB+ 显存；显存较小可降低 `--ctx-size` 或换更小模型。
+- 备份策略按你自己的约定执行（如定期 rsync 到外部盘），不在仓库内。
