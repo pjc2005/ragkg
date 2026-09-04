@@ -1,4 +1,4 @@
-# YOUR_APP 实时监控仪表盘
+# 实时监控仪表盘
 
 地址: https://<your-domain> (经 Cloudflare under_attack 保护, 仅真实浏览器可访问)
 
