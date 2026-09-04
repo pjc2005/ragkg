@@ -1,0 +1,26 @@
+name = "<your-worker>"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+# 绑定 KV namespace (ID 部署时用 `wrangler kv namespace create` 生成后填入)
+[[kv_namespaces]]
+binding = "EDGE_KV"
+id = "<your-kv-id>"  # 部署时 wrangler kv namespace create 生成
+
+# 路由: <your-domain> 作为自定义域名打到本 worker (custom_domain 不允许 * 或 path)
+[[routes]]
+pattern = "<your-domain>"
+custom_domain = true
+
+# 免费档订阅, 不产生费用
+[observability]
+enabled = true
+
+# ============================================================
+# 部署步骤 (需 CF API token):
+#   1. export CLOUDFLARE_API_TOKEN=...
+#   2. wrangler kv namespace create EDGE_KV   -> 拿到 id, 填到上面
+#   3. wrangler deploy   -> 自动创建 <your-domain> + 上传 worker
+#   4. 本地回源目标已经是 <your-domain>, 隧道/8123 无需改动
+# ============================================================

@@ -1,0 +1,22 @@
+[Unit]
+Description=Cloudflare Tunnel (tunnel: home -> <your-domain>)
+After=network-online.target mihomo.service
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=anaya
+ExecStart=/usr/local/bin/cloudflared tunnel --config <your-project-path>/.cloudflared/config.yml run home
+Environment=HTTPS_PROXY=http://127.0.0.1:7890
+Environment=HTTP_PROXY=http://127.0.0.1:7890
+Environment=NO_PROXY=localhost,127.0.0.1
+Restart=on-failure
+RestartSec=5
+# 干净退出信号
+SuccessExitStatus=SIGINT
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

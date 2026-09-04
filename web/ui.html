@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YOUR_APP · 知识库</title>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<script src="/pj.js"></script>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--line:#21262d;--txt:#e6edf3;--dim:#8b949e;
+        --acc:#58a6ff;--ok:#3fb950;--warn:#d29922;--pink:#f778ba;--purple:#bc8cff}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;min-height:100vh;overflow:hidden}
+  .top{display:flex;align-items:center;gap:12px;padding:14px 24px;border-bottom:1px solid var(--line);
+       background:linear-gradient(90deg,rgba(88,166,255,.08),transparent);flex-wrap:wrap}
+  .logo{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#58a6ff,#3fb950);
+        display:flex;align-items:center;justify-content:center;font-weight:800;color:#0d1117;font-size:17px;text-decoration:none}
+  /* ---- 移动端竖屏优化 ---- */
+  @media (max-width:700px){
+    body{display:flex;flex-direction:column;overflow:hidden}
+    .top{padding:10px 14px;gap:10px}
+    .logo{width:30px;height:30px;font-size:14px;border-radius:8px}
+    h1{font-size:16px}
+    .sub{font-size:11px}
+    .bar{padding:10px 12px;gap:8px}
+    input[type=text]{min-width:0;padding:10px 12px;font-size:14px}
+    button{padding:9px 14px}
+    .layout-bar{width:100%;margin-left:0;justify-content:flex-start}
+    .layout-bar button{flex:1;font-size:11px}
+    .main{flex-direction:column;flex:1;min-height:0;overflow:hidden}
+    #anscol{width:100%;min-width:0;flex:2;border-right:none;border-bottom:1px solid var(--line)}
+    #anscol h2{padding:10px 14px}
+    #ans{padding:12px 14px;font-size:14px}
+    #graph{flex:3;min-height:0}
+    .legend{padding:8px 10px;min-width:0;font-size:11px;top:8px;left:8px}
+    .legend .sw{width:10px;height:10px}
+    .stats{top:8px;right:8px;padding:8px 10px;font-size:11px}
+    #detail{width:92%;padding:12px 14px;bottom:10px}
+    .hint{bottom:8px;right:10px;font-size:11px;padding:5px 10px}
+    .home-btn{display:inline-block}
+  }
+  @media (max-width:380px){
+    .legend div:nth-child(n+5){display:none}
+    #anscol{flex:2}
+    #graph{flex:3}
+  }
+  h1{font-size:18px}
+  .sub{color:var(--dim);font-size:12px}
+  .bar{display:flex;gap:10px;padding:14px 24px;flex-wrap:wrap;align-items:center;
+       background:var(--panel);border-bottom:1px solid var(--line)}
+  input[type=text]{flex:1;min-width:220px;background:#0d1117;border:1px solid var(--line);
+        color:var(--txt);padding:11px 14px;border-radius:9px;font-size:15px;outline:none}
+  input:focus{border-color:var(--acc)}
+  button{background:var(--acc);color:#0d1117;border:none;padding:10px 20px;border-radius:9px;
+        font-size:14px;font-weight:600;cursor:pointer}
+  button.ghost{background:transparent;color:var(--txt);border:1px solid var(--line)}
+  button:hover{opacity:.88}
+  .layout-bar{display:flex;gap:8px;margin-left:auto}
+  .layout-bar button{padding:7px 14px;font-size:12px}
+  .main{display:flex;gap:0;height:calc(100vh - 132px);position:relative}
+  #anscol{width:360px;min-width:300px;border-right:1px solid var(--line);overflow-y:auto;
+          background:var(--panel);display:flex;flex-direction:column}
+  #anscol h2{font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;
+        padding:14px 20px;border-bottom:1px solid var(--line)}
+  #ans{padding:18px 20px;line-height:1.75;font-size:14.5px;white-space:pre-wrap}
+  #ans .src{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  #ans .src div{font-size:12.5px;color:var(--dim);margin-bottom:9px;line-height:1.5}
+  #ans .src b{color:var(--acc)}
+  #graph{flex:1;position:relative}
+  .legend{position:absolute;top:14px;left:14px;background:rgba(22,27,34,.92);border:1px solid var(--line);
+        border-radius:10px;padding:12px 14px;z-index:5;font-size:12px;min-width:150px;
+        backdrop-filter:blur(4px)}
+  .legend div{display:flex;align-items:center;gap:8px;margin:5px 0}
+  .legend .sw{width:12px;height:12px;border-radius:50%;display:inline-block}
+  .stats{position:absolute;top:14px;right:14px;background:rgba(22,27,34,.92);border:1px solid var(--line);
+        border-radius:10px;padding:10px 14px;z-index:5;font-size:12px;color:var(--dim);
+        text-align:right;backdrop-filter:blur(4px)}
+  .stats b{color:var(--txt)}
+  #detail{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(22,27,34,.95);
+        border:1px solid var(--line);border-radius:12px;padding:14px 20px;z-index:6;width:420px;max-width:88%;
+        box-shadow:0 8px 30px rgba(0,0,0,.5);display:none;backdrop-filter:blur(6px)}
+  #detail h3{font-size:16px;display:flex;align-items:center;gap:8px}
+  #detail .kind{font-size:11px;color:#0d1117;background:var(--acc);padding:2px 8px;border-radius:999px}
+  #detail .neighbors{margin-top:10px;font-size:13px;color:var(--dim);max-height:180px;overflow-y:auto}
+  #detail .neighbors div{margin:5px 0;padding:6px 8px;background:rgba(13,17,23,.6);border-radius:8px}
+  #detail .neighbors b{color:var(--acc)}
+  #detail .close{position:absolute;top:10px;right:14px;cursor:pointer;color:var(--dim);font-size:16px}
+  .hint{position:absolute;bottom:18px;right:22px;color:var(--dim);font-size:12px;z-index:4;
+        background:rgba(22,27,34,.8);padding:6px 12px;border-radius:8px;border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="top">
+  <a class="logo" href="/index.html" title="回到主页">A</a>
+  <div><h1>YOUR_APP 知识库</h1>
+       <div class="sub">Qwen3-VL 切片 · bge-m3 向量 · Qwen9B 问答 · 知识图谱</div></div>
+  <div class="layout-bar">
+    <a href="/index.html" style="text-decoration:none;color:var(--txt);font-size:12px;padding:7px 14px;border:1px solid var(--line);border-radius:8px;display:inline-block">🏠 主页</a>
+    <button class="ghost" id="layForce">力导向</button>
+    <button class="ghost" id="layHiero">层级</button>
+    <button class="ghost" id="layCluster">按类型聚簇</button>
+  </div>
+</div>
+<div class="bar">
+  <input id="q" type="text" placeholder="输入问题，回车提问… 如: Transformer是谁提出的">
+  <button id="askBtn">提问</button>
+  <button id="graphBtn" class="ghost">全图谱</button>
+  <button id="docBtn" class="ghost">文档</button>
+</div>
+<div class="main">
+  <div id="anscol">
+    <h2>回答</h2>
+    <div id="ans" style="color:var(--dim);font-size:13px">输入问题开始，或点「全图谱」浏览知识库</div>
+  </div>
+  <div id="graph">
+    <div class="legend">
+      <b style="color:var(--dim)">实体类型</b>
+      <div><span class="sw" style="background:#3fb950"></span> 人物</div>
+      <div><span class="sw" style="background:#d29922"></span> 组织/公司</div>
+      <div><span class="sw" style="background:#58a6ff"></span> 概念</div>
+      <div><span class="sw" style="background:#f778ba"></span> 技术</div>
+      <div><span class="sw" style="background:#bc8cff"></span> 产品</div>
+      <div><span class="sw" style="background:#8b949e"></span> 地点/其它</div>
+    </div>
+    <div class="stats" id="stats">图谱加载中…</div>
+    <div id="detail"></div>
+    <div class="hint">拖拽节点 / 滚轮缩放 / 点节点看详情</div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let network=null, allGraph=null;
+const COLOR={person:'#3fb950',org:'#d29922',concept:'#58a6ff',tech:'#f778ba',product:'#bc8cff',
+  location:'#8b949e',technique:'#a5d6ff',year:'#8b949e'};
+const KIND_CN={person:'人物',org:'组织',concept:'概念',tech:'技术',product:'产品',location:'地点',technique:'技术',year:'年份'};
+const DEGREE={person:22,org:20,concept:18,tech:16,product:16,location:13,technique:14,year:13};
+
+function buildNodes(data){
+  return (data.nodes||[]).map(n=>{
+    const kw=(n.name||'').length>8?20:15;
+    return {id:n.id,label:n.name,title:n.kind,
+      color:{background:COLOR[n.kind]||'#8b949e',border:'#ffffff40'},
+      size:(DEGREE[n.kind]||15)+((n.degree||0)*0.5>6?6:0),
+      font:{color:'#e6edf3',size:13,face:'Noto Sans SC'},borderWidth:2};
+  });
+}
+function buildEdges(data){
+  return (data.edges||[]).map((e,i)=>({id:i,from:e.src,to:e.dst,label:e.relation,
+    width:1.2,color:{color:'#8b949e',opacity:.6},smooth:{enabled:true,type:'continuous'},
+    font:{color:'#a5b3c2',size:10,strokeWidth:2,strokeColor:'#0d1117'},length:150}));
+}
+function drawGraph(data,layout='force'){
+  allGraph=data;
+  const container=$('graph');
+  // remove detail/legend kids except detail
+  const stats=$('stats');
+  const nodes=buildNodes(data), edges=buildEdges(data);
+  const physics = layout==='force' ? {enabled:true,solver:'forceAtlas2Based',
+    forceAtlas2Based:{gravitationalConstant:-70,centralGravity:.015,springLength:140,
+      springConstant:.06,damping:.4},stabilization:{iterations:300,updateInterval:20}} :
+    layout==='cluster' ? {enabled:true,barnesHut:{gravitationalConstant:-1200,centralGravity:.3,
+      springLength:160,springConstant:.03,damping:.3},stabilization:{iterations:400}} :
+    {enabled:false};
+  const dataOpts={nodes,edges};
+  const options={nodes:{shape:'dot',font:{face:'Noto Sans SC',color:'#e6edf3'}},
+    edges:{arrows:{to:{enabled:true,scaleFactor:.5}},font:{face:'Noto Sans SC'}},
+    physics,
+    interaction:{hover:true,tooltipDelay:200,dragNodes:true,zoomView:true,
+      navigationButtons:true,keyboard:true},
+    layout: layout==='hiero'? {hierarchical:{enabled:true,direction:'UD',
+      sortMethod:'directed',levelSeparation:200,nodeSpacing:140}}:{}};
+  network=new vis.Network(container,dataOpts,options);
+  if(layout==='cluster'&&network.clustering){
+    // 按实体类型聚类成簇: 同类型节点收成一团
+    const byKind={};
+    (data.nodes||[]).forEach(n=>{(byKind[n.kind]=byKind[n.kind]||[]).push(n.id);});
+    Object.entries(byKind).forEach(([k,ids])=>{
+      network.clustering.clusterByConnection(ids[0],{joinCondition:n=>ids.includes(n.id),
+        clusterNodeProperties:{id:'cluster_'+k,label:(KIND_CN[k]||k)+' ('+ids.length+')',
+          color:{background:COLOR[k]||'#8b949e'},shape:'dot',size:30},
+        processProperties:()=>({})});
+    });
+  }
+  network.on('click',p=>{const id=p.nodes[0];if(id)showNodeDetail(id);});
+  const statsEl=$('stats');
+  statsEl.innerHTML=`<b>${data.nodes.length}</b> 实体 · <b>${data.edges.length}</b> 关系`;
+}
+function showNodeDetail(id){
+  const d=$('detail'); const n=allGraph.nodes.find(x=>x.id===id); if(!n)return;
+  const neighbors=allGraph.edges.filter(e=>e.src===id||e.dst===id);
+  let nh='';
+  neighbors.forEach(e=>{
+    const other= e.src===id? (allGraph.nodes.find(x=>x.id===e.dst)||{}).name : (allGraph.nodes.find(x=>x.id===e.src)||{}).name;
+    nh+=`<div><b>${other}</b> — <span style="color:${e.relation.length>8?'#58a6ff':'#8b949e'}">${e.relation}</span></div>`;
+  });
+  d.style.display='block';
+  d.innerHTML=`<span class="close" onclick="this.parentElement.style.display='none'">✕</span>
+    <h3>${n.name}<span class="kind">${KIND_CN[n.kind]||n.kind}</span></h3>
+    <div class="neighbors">${nh||'暂无直接关联'}</div>`;
+}
+async function ask(q){
+  if(!q)return;
+  window.pj && window.pj('ask');
+  $('#ans').innerHTML='<span style="color:var(--dim)">思考中…</span>';
+  try{
+    const r=await fetch('/ask?q='+encodeURIComponent(q)); const d=await r.json();
+    let html=escapeHtml(d.answer||'(无答案)');
+    if(d.sources&&d.sources.length){
+      html+='<div class="src"><b>引用来源</b>';
+      d.sources.forEach(c=>html+=`<div><b>${c.doc}:${c.seq}</b> — ${escapeHtml(c.text).slice(0,110)}…</div>`);
+      html+='</div>';
+    }
+    $('#ans').innerHTML=html;
+    if(d.graph)drawGraph(d.graph,'force');
+  }catch(e){$('#ans').textContent='出错: '+e.message;}
+}
+function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+async function loadGraph(){
+  window.pj && window.pj('graph');
+  try{const r=await fetch('/graph?limit=200');const d=await r.json();
+    drawGraph({nodes:d.nodes,edges:d.edges},'cluster');}catch(e){}
+}
+$('askBtn').onclick=()=>ask($('q').value);
+$('q').onkeydown=e=>{if(e.key==='Enter')ask(e.target.value);};
+$('graphBtn').onclick=loadGraph;
+$('layForce').onclick=()=>allGraph&&drawGraph(allGraph,'force');
+$('layHiero').onclick=()=>allGraph&&drawGraph(allGraph,'hiero');
+$('layCluster').onclick=()=>allGraph&&drawGraph(allGraph,'cluster');
+// doc
+$('docBtn').onclick=async()=>{try{const r=await fetch('/documents');const d=await r.json();
+  $('#ans').innerHTML='<div class="src"><b>知识库文档</b>'+(d.documents||[]).map(x=>`<div><b>${x.title}</b> — ${x.chunks} 切片</div>`).join('')+'</div>';}catch(e){}};
+loadGraph();
+</script>
+</body>
+</html>

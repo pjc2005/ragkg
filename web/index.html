@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YOUR_APP · Self-hosted</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --line:#21262d; --txt:#e6edf3;
+    --dim:#8b949e; --acc:#58a6ff; --ok:#3fb950; --warn:#d29922; --err:#f85149;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;
+    min-height:100vh; display:flex; flex-direction:column;
+    background-image:radial-gradient(circle at 20% -10%, rgba(88,166,255,.08), transparent 45%),
+                     radial-gradient(circle at 85% 110%, rgba(63,185,80,.06), transparent 45%);
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:48px 24px 24px;width:100%;flex:1}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:40px}
+  .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,#58a6ff,#3fb950);
+        display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:#0d1117}
+  h1{font-size:22px;font-weight:700}
+  .sub{color:var(--dim);font-size:13px;margin-top:2px}
+  .tag{font-size:11px;border:1px solid var(--line);color:var(--dim);padding:2px 8px;border-radius:999px}
+  h2{font-size:13px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:8px 0 14px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}}
+  /* ---- 移动端竖屏优化 ---- */
+  @media(max-width:600px){
+    .wrap{padding:28px 16px 20px}
+    header{flex-direction:column;align-items:flex-start;gap:10px;margin-bottom:28px}
+    h1{font-size:19px}
+    .card{padding:16px}
+    .card .name{font-size:15px}
+    .status-row{flex-wrap:wrap;padding:10px 12px;font-size:12px}
+    .foot{font-size:11px;padding-top:16px}
+  }
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:18px;text-decoration:none;color:var(--txt);transition:border-color .15s,transform .15s;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  .card:hover{border-color:var(--acc);transform:translateY(-2px)}
+  .card .name{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px}
+  .card .desc{color:var(--dim);font-size:13px;line-height:1.5}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .dot.ok{background:var(--ok);box-shadow:0 0 8px rgba(63,185,80,.6)}
+  .dot.off{background:var(--warn);box-shadow:0 0 6px rgba(210,153,34,.5)}
+  .card.soon{opacity:.75}
+  .foot{color:var(--dim);font-size:12px;text-align:center;margin-top:40px;padding-top:20px;
+        border-top:1px solid var(--line)}
+  .status-row{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--dim);
+        background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-bottom:24px}
+  .status-row b{color:var(--txt)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">A</div>
+    <div>
+      <h1>YOUR_APP 自托管中心 <span class="tag"><your-domain></span></h1>
+      <div class="sub">Debian 13 · Tesla P100 · 7×24</div>
+    </div>
+  </header>
+
+  <div class="status-row">
+    <span class="dot ok"></span>
+    <span><b>隧道在线</b> · Cloudflare Tunnel (QUIC) · 走本地代理出海</span>
+  </div>
+
+  <h2>本地知识服务</h2>
+  <div class="grid">
+    <a class="card" href="/graph.html">
+      <div class="name"><span class="dot ok"></span> 知识图谱</div>
+      <div class="desc">图谱下钻浏览。顶层核心实体 → 逐层展开父子关系。</div>
+    </a>
+    <a class="card" href="/files/">
+      <div class="name"><span class="dot ok"></span> 文件传输</div>
+      <div class="desc">Web 文件收件箱 / 管理器。上传下载，同时作为知识库导入池。</div>
+    </a>
+    <a class="card" href="/stats.html">
+      <div class="name"><span class="dot ok"></span> 用量统计</div>
+      <div class="desc">Cloudflare Worker 免费打点层。谁在用、用了多少次，实时仪表盘。</div>
+    </a>
+    <a class="card" href="https://<your-domain>">
+      <div class="name"><span class="dot ok"></span> 通用图库</div>
+      <div class="desc">Photoview 图库。往服务器 <your-project-path>/photos 丢图即入库；含量化回声头像选型预览。</div>
+    </a>
+    <a class="card soon" href="/ui.html">
+      <div class="name"><span class="dot off"></span> RAG 问答</div>
+      <div class="desc">本地知识库检索问答。Qwen3-VL-2B 切片 + bge-m3 向量 + Qwen 9B。</div>
+    </a>
+  </div>
+
+  <h2 style="margin-top:28px">基础设施</h2>
+  <div class="grid">
+    <a class="card" href="https://<your-domain>" style="pointer-events:none">
+      <div class="name"><span class="dot ok"></span> 隧道代理</div>
+      <div class="desc">mihomo (TaiShan/TaiShan) · 端口 7890 · 国产直连/出海走代理</div>
+    </a>
+    <a class="card" href="https://<your-domain>">
+      <div class="name"><span class="dot ok"></span> 实时监控</div>
+      <div class="desc">服务器实时状态看板：GPU 显存/系统负载/服务健康/出海出口/知识库行数。自动刷新。</div>
+    </a>
+  </div>
+
+  <div class="foot">YOUR_APP · Self-hosted Home · 本地运行，经 Cloudflare Access 保护</div>
+</div>
+<script src="/pj.js"></script>
+<script>window.pj && window.pj('home');</script>
+</body>
+</html>

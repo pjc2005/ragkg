@@ -1,0 +1,16 @@
+[Unit]
+Description=llama-server: Qwen3-VL-2B (slice/graph extract, :8999)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=anaya
+ExecStart=<your-project-path>/src/llama.cpp-master/build/bin/llama-server -m <your-project-path>/models/Qwen3VL-2B-Instruct-Q8_0.gguf --mmproj <your-project-path>/models/mmproj-Qwen3VL-2B-Instruct-Q8_0.gguf --host 127.0.0.1 --port 8999 -ngl 99 --cache-type-k q8_0 --cache-type-v q8_0 --no-webui -c 16384 --ctx-size 16384
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

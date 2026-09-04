@@ -1,0 +1,24 @@
+# 环境 / 缓存
+.venv/
+__pycache__/
+*.pyc
+
+# 数据 / 知识库 / 个人导出（含 DeepSeek 数据导出，绝不公开）
+files/
+backups/
+fb/
+data/
+*.sqlite3
+
+# 运行时状态
+task_progress.json
+.cf_ids
+
+# Cloudflare wrangler 缓存
+edge-worker/.wrangler/
+.wrangler/
+# 仓库内旧回收站
+.trash*/
+
+# 含个人口令的运维文档，不入库
+FILESHARE.md

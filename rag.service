@@ -1,0 +1,23 @@
+[Unit]
+Description=YOUR_APP RAG (FastAPI + knowledge graph, <your-domain>)
+After=network-online.target postgresql.service
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=anaya
+WorkingDirectory=<your-project-path>/ragkg
+ExecStart=<your-project-path>/ragkg/.venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8123
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+# 反代 /stats 访问 workers.dev 需走本机 mihomo 代理(直连出站不通)
+Environment=HTTPS_PROXY=http://127.0.0.1:7890
+Environment=HTTP_PROXY=http://127.0.0.1:7890
+Environment=NO_PROXY=127.0.0.1,localhost
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

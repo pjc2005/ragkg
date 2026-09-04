@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图谱 Demo 1 · Cytoscape.js</title>
+<script src="https://unpkg.com/cytoscape@3.34.0/dist/cytoscape.min.js"></script>
+<style>
+  :root{--bg:#0d1117;--panel:#161b22;--line:#21262d;--txt:#e6edf3;--dim:#8b949e}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;height:100vh;overflow:hidden}
+  .top{display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid var(--line)}
+  h1{font-size:18px}
+  .tag{background:var(--acc,#58a6ff);color:#0d1117;font-size:12px;padding:3px 10px;border-radius:999px}
+  .bar{display:flex;gap:8px;padding:12px 22px;flex-wrap:wrap;align-items:center}
+  button{background:var(--panel);color:var(--txt);border:1px solid var(--line);padding:8px 16px;border-radius:8px;cursor:pointer}
+  button.active{background:var(--acc,#58a6ff);color:#0d1117;border-color:var(--acc,#58a6ff);font-weight:600}
+  .legend{display:flex;gap:14px;margin-left:auto;font-size:12px;color:var(--dim);flex-wrap:wrap}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  #cy{height:calc(100vh - 105px)}
+  #detail{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(22,27,34,.96);
+    border:1px solid var(--line);border-radius:12px;padding:16px 22px;display:none;z-index:10;
+    min-width:340px;max-width:80%;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+  #detail h3{font-size:16px;margin-bottom:6px}
+  #detail .rel{margin:4px 0;color:var(--dim);font-size:13px}
+  #detail .rel b{color:var(--acc,#58a6ff)}
+  #detail .close{position:absolute;top:10px;right:14px;cursor:pointer;color:var(--dim)}
+  #detail .cnt{font-size:11px;color:var(--dim);margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>图谱 Demo <span class="tag">Cytoscape.js</span></h1>
+  <div class="legend">
+    <span><i style="background:#3fb950"></i>人物</span>
+    <span><i style="background:#d29922"></i>组织</span>
+    <span><i style="background:#58a6ff"></i>概念</span>
+    <span><i style="background:#f778ba"></i>技术</span>
+    <span><i style="background:#bc8cff"></i>产品</span>
+    <span><i style="background:#8b949e"></i>其它</span>
+  </div>
+</div>
+<div class="bar">
+  <button id="lg-cose" class="active">力导向 cose</button>
+  <button id="lg-breadth">层级 breadthFirst</button>
+  <button id="lg-concentric">同心 concentric</button>
+  <button id="lg-grid">网格 grid</button>
+</div>
+<div id="cy"></div>
+<div id="detail"></div>
+
+<script>
+const COLOR={person:'#3fb950',org:'#d29922',concept:'#58a6ff',tech:'#f778ba',product:'#bc8cff',
+  location:'#8b949e',technique:'#a5d6ff',year:'#8b949e'};
+const KIND_CN={person:'人物',org:'组织',concept:'概念',tech:'技术',product:'产品',location:'地点',technique:'技术',year:'年份'};
+const $=id=>document.getElementById(id);
+let cy;
+
+async function load(){
+  const r=await fetch('/graph?limit=300');
+  const d=await r.json();
+  const elements=[];
+  d.nodes.forEach(n=>elements.push({data:{id:'n'+n.id,label:n.name,kind:n.kind,degree:n.degree}}));
+  d.edges.forEach(e=>elements.push({data:{id:'e'+e.id,source:'n'+e.src_id,target:'n'+e.dst_id,label:e.relation}}));
+  cy=cytoscape({
+    container:$('cy'),elements,
+    style:[
+      {selector:'node',style:{
+        'background-color':'#58a6ff',
+        'width':'mapData(degree,0,10,16,48)',
+        'height':'mapData(degree,0,10,16,48)',
+        'label':'data(label)','color':'#e6edf3','font-size':12,
+        'text-valign':'center','text-halign':'center',
+        'text-outline-width':2,'text-outline-color':'#0d1117',
+        'border-width':2,'border-color':'#ffffff33','overlay-opacity':0}},
+      {selector:'node[kind="person"]',style:{'background-color':'#3fb950'}},
+      {selector:'node[kind="org"]',style:{'background-color':'#d29922'}},
+      {selector:'node[kind="concept"]',style:{'background-color':'#58a6ff'}},
+      {selector:'node[kind="tech"],node[kind="technique"]',style:{'background-color':'#f778ba'}},
+      {selector:'node[kind="product"]',style:{'background-color':'#bc8cff'}},
+      {selector:'node[kind="location"],node[kind="year"]',style:{'background-color':'#8b949e'}},
+      {selector:'edge',style:{
+        'label':'data(label)','font-size':9,'color':'#9aa5b1',
+        'line-color':'#4a5568','target-arrow-color':'#4a5568','target-arrow-shape':'triangle',
+        'curve-style':'bezier','width':1.2,'text-background-color':'#0d1117','text-background-opacity':.75,
+        'text-background-padding':'2px','overlay-opacity':0}},
+      {selector:'.faded',style:{'opacity':.25}}
+    ],
+    layout:{name:'cose',animate:true,animationDuration:700,padding:30,
+      idealEdgeLength:140,nodeRepulsion:50000,nodeOverlap:20,coupling:8}
+  });
+  cy.on('tap','node',e=>{
+    const n=e.target;
+    cy.elements().removeClass('faded');
+    const nb=n.closedNeighborhood();
+    cy.elements().not(nb).addClass('faded');
+    showDetail(n);
+  });
+  cy.on('tap',()=>{if(cy.selectionType()==='single'){/* noop */}});
+  cy.on('tap',(e)=>{if(e.target===cy)showDetail(null);});
+}
+function layout(name){
+  const opts={
+    cose:{name:'cose',animate:true,animationDuration:600,idealEdgeLength:140,
+      nodeRepulsion:50000,coupling:8,padding:30},
+    'concentric':{name:'concentric',animate:true,animationDuration:600,minNodeSpacing:60,height:1},
+    'breadthfirst':{name:'breadthfirst',animate:true,animationDuration:600,
+      directed:true,spacingFactor:1.4,margins:20},
+    'grid':{name:'grid',animate:true,animationDuration:600,padding:20}
+  };
+  cy.layout(opts[name]).run();
+}
+function showDetail(n){
+  const d=$('detail');
+  if(!n){d.style.display='none';return;}
+  const id='n'+n.data('id');
+  const rels=[];
+  cy.edges().forEach(e=>{
+    if(e.data('source')===id||e.data('target')===id){
+      const other=e.data('source')===id?e.data('target'):e.data('source');
+      const otherNode=cy.getElementById(other);
+      rels.push(`${e.data('label')} → ${otherNode.data('label')||other}`);
+    }
+  });
+  d.style.display='block';
+  d.innerHTML=`<span class="close" onclick="this.parentElement.style.display='none'">✕</span>
+    <h3>${n.data('label')} （${KIND_CN[n.data('kind')]||n.data('kind')}）</h3>
+    <div class="cnt">关联 ${rels.length} 条</div>
+    ${rels.map(r=>`<div class="rel"><b>🔗</b> ${r}</div>`).join('')||'<div class="rel">暂无直接关联</div>'}`;
+}
+const btns={'cose':$('lg-cose'),'breadth':$('lg-breadth'),'concentric':$('lg-concentric'),'grid':$('lg-grid')};
+Object.entries({'cose':'lg-cose','breadth':'lg-breadth','concentric':'lg-concentric','grid':'lg-grid'})
+  .forEach(([k,id])=>$(id).onclick=()=>{Object.values(btns).forEach(b=>b.classList.remove('active'));$(id).classList.add('active');layout(k);});
+load();
+</script>
+</body>
+</html>

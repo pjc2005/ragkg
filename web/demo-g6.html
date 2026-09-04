@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图谱 Demo 2 · AntV G6</title>
+<script src="https://unpkg.com/@antv/g6@4.8.24/dist/g6.min.js"></script>
+<style>
+  :root{--bg:#0d1117;--line:#21262d;--txt:#e6edf3;--dim:#8b949e}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;height:100vh;overflow:hidden}
+  .top{display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid var(--line)}
+  h1{font-size:18px}
+  .tag{background:#722ed1;color:#fff;font-size:12px;padding:3px 10px;border-radius:999px}
+  .bar{display:flex;gap:8px;padding:12px 22px;flex-wrap:wrap;align-items:center}
+  button{background:#161b22;color:var(--txt);border:1px solid var(--line);padding:8px 16px;border-radius:8px;cursor:pointer}
+  button.active{background:#722ed1;border-color:#722ed1;font-weight:600;color:#fff}
+  .legend{display:flex;gap:14px;margin-left:auto;font-size:12px;color:var(--dim);flex-wrap:wrap}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  #g6{width:100%;height:calc(100vh - 105px)}
+  #detail{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(22,27,34,.96);
+    border:1px solid #33304a;border-radius:12px;padding:16px 22px;display:none;z-index:10;
+    min-width:340px;max-width:80%;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+  #detail h3{font-size:16px;margin-bottom:6px}
+  #detail .rel{margin:4px 0;color:var(--dim);font-size:13px}
+  #detail .rel b{color:#b37feb}
+  #detail .close{position:absolute;top:10px;right:14px;cursor:pointer;color:var(--dim)}
+  #detail .cnt{font-size:11px;color:var(--dim);margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>图谱 Demo <span class="tag">AntV G6</span></h1>
+  <div class="legend">
+    <span><i style="background:#3fb950"></i>人物</span>
+    <span><i style="background:#d29922"></i>组织</span>
+    <span><i style="background:#58a6ff"></i>概念</span>
+    <span><i style="background:#f778ba"></i>技术</span>
+    <span><i style="background:#bc8cff"></i>产品</span>
+    <span><i style="background:#8b949e"></i>其它</span>
+  </div>
+</div>
+<div class="bar">
+  <button id="l-force" class="active">力导向 force</button>
+  <button id="l-radial">径向 radial</button>
+  <button id="l-hier">分层 dagre</button>
+  <button id="l-conc">同心 concentric</button>
+</div>
+<div id="g6"></div>
+<div id="detail"></div>
+
+<script>
+const COLOR={person:'#3fb950',org:'#d29922',concept:'#58a6ff',tech:'#f778ba',product:'#bc8cff',
+  location:'#8b949e',technique:'#a5d6ff',year:'#8b949e'};
+const KIND_CN={person:'人物',org:'组织',concept:'概念',tech:'技术',product:'产品',location:'地点',technique:'技术',year:'年份'};
+const $=id=>document.getElementById(id);
+let graph, allData;
+
+// G6 需要在 HEAD 里调用 G6.Graph...有的浏览器需等库加载
+function init(){
+  fetch('/graph?limit=300').then(r=>r.json()).then(d=>{
+    allData=d;
+    const nodes=d.nodes.map(n=>({id:'n'+n.id,label:n.name,kind:n.kind,degree:n.degree,
+      size:Math.min(14+n.degree*1.5,36),
+      style:{fill:COLOR[n.kind]||'#8b949e',stroke:'#ffffff2e',lineWidth:2},
+      labelCfg:{style:{fill:'#e6edf3',fontSize:12}}}));
+    const edges=d.edges.map(e=>({id:'e'+e.id,source:'n'+e.src_id,target:'n'+e.dst_id,
+      label:e.relation, type:'quadratic',
+      style:{stroke:'#4a5568',endArrow:{path:G6.Arrow.triangle(6,8,0)}},
+      labelCfg:{style:{fill:'#9aa5b1',fontSize:9}}}));
+    graph=new G6.Graph({
+      container:'g6',width:containerW(),height:containerH(),
+      fitView:true,fitViewPadding:40,
+      modes:{default:['drag-canvas','zoom-canvas','drag-node']},
+      layout:{type:'force',preventOverlap:true,nodeSize:[40,40],linkDistance:150,nodeStrength:-80},
+      defaultNode:{type:'circle',labelCfg:{offset:4}},
+      defaultEdge:{style:{stroke:'#4a5568'}},
+    });
+    graph.data({nodes,edges});
+    graph.render();
+    graph.on('node:click',e=>showDetail(e.item.getModel()));
+  }).catch(e=>alert('加载失败: '+e.message));
+}
+function containerW(){return document.getElementById('g6').clientWidth||800;}
+function containerH(){return document.getElementById('g6').clientHeight||600;}
+function layout(type){
+  const map={
+    force:{type:'force',preventOverlap:true,nodeSize:[40,40],linkDistance:150,nodeStrength:-80},
+    radial:{type:'radial',preventOverlap:true,linkDistance:150,strictRadial:false},
+    hier:{type:'dagre',rankdir:'TB',align:'DL',nodesep:40,ranksep:60},
+    conc:{type:'concentric',preventOverlap:true,nodeSize:[40,40],maxLevelDiff:2}
+  };
+  graph.updateLayout(map[type]);
+}
+function showDetail(model){
+  const d=$('detail'); const id=model.id;
+  const rels=[];
+  allData.edges.forEach(e=>{
+    if('n'+e.src_id===id||'n'+e.dst_id===id){
+      const other=('n'+e.src_id===id)?('n'+e.dst_id):('n'+e.src_id);
+      const otherNode=allData.nodes.find(n=>'n'+n.id===other);
+      rels.push(`${e.relation} → ${otherNode?otherNode.name:other}`);
+    }
+  });
+  d.style.display='block';
+  d.innerHTML=`<span class="close" onclick="this.parentElement.style.display='none'">✕</span>
+    <h3>${model.label} （${KIND_CN[model.kind]||model.kind}）</h3>
+    <div class="cnt">关联 ${rels.length} 条</div>
+    ${rels.map(r=>`<div class="rel"><b>🔗</b> ${r}</div>`).join('')||'<div class="rel">暂无直接关联</div>'}`;
+}
+if(window.G6)init(); else window.addEventListener('load',init);
+const bmap={'force':'l-force','radial':'l-radial','hier':'l-hier','conc':'l-conc'};
+Object.entries(bmap).forEach(([k,id])=>$(id).onclick=()=>{Object.values(bmap).forEach(i=>document.getElementById(i).classList.remove('active'));$(id).classList.add('active');layout(k);});
+</script>
+</body>
+</html>

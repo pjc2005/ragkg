@@ -1,0 +1,16 @@
+[Unit]
+Description=llama-server: bge-m3 embedding (:8998)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=anaya
+ExecStart=<your-project-path>/src/llama.cpp-master/build/bin/llama-server -m <your-project-path>/models/bge-m3-Q8_0.gguf --embeddings --pooling mean --host 127.0.0.1 --port 8998 -ngl 99 --no-webui -c 8192 --ctx-size 8192 --batch-size 2048 --ubatch-size 2048
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

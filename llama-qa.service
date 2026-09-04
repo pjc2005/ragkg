@@ -1,0 +1,16 @@
+[Unit]
+Description=llama-server: Qwen3.5-9B (RAG QA, :8080)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=anaya
+ExecStart=<your-project-path>/src/llama.cpp-master/build/bin/llama-server -m <your-project-path>/models/Qwen3.5-9B-Q8_0.gguf --host 127.0.0.1 --port 8080 -ngl 99 --cache-type-k q8_0 --cache-type-v q8_0 --no-webui -c 16384 --ctx-size 16384 --reasoning off
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

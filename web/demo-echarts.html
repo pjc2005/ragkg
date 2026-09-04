@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图谱 Demo 3 · ECharts</title>
+<script src="https://unpkg.com/echarts@5/dist/echarts.min.js"></script>
+<style>
+  :root{--bg:#0d1117;--line:#21262d;--txt:#e6edf3;--dim:#8b949e}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;height:100vh;overflow:hidden}
+  .top{display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid var(--line)}
+  h1{font-size:18px}
+  .tag{background:#3f6212;color:#fff;font-size:12px;padding:3px 10px;border-radius:999px}
+  .bar{display:flex;gap:8px;padding:12px 22px;flex-wrap:wrap;align-items:center}
+  button{background:#161b22;color:var(--txt);border:1px solid var(--line);padding:8px 16px;border-radius:8px;cursor:pointer}
+  button.active{background:#84cc16;border-color:#84cc16;font-weight:600;color:#1a2e05}
+  .legend{display:flex;gap:14px;margin-left:auto;font-size:12px;color:var(--dim);flex-wrap:wrap}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  #chart{width:100%;height:calc(100vh - 105px)}
+  #detail{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(22,27,34,.96);
+    border:1px solid #4d7c0f;border-radius:12px;padding:16px 22px;display:none;z-index:10;
+    min-width:340px;max-width:80%;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+  #detail h3{font-size:16px;margin-bottom:6px}
+  #detail .rel{margin:4px 0;color:var(--dim);font-size:13px}
+  #detail .rel b{color:#a3e635}
+  #detail .close{position:absolute;top:10px;right:14px;cursor:pointer;color:var(--dim)}
+  #detail .cnt{font-size:11px;color:var(--dim);margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>图谱 Demo <span class="tag">ECharts Graph</span></h1>
+  <div class="legend">
+    <span><i style="background:#3fb950"></i>人物</span>
+    <span><i style="background:#d29922"></i>组织</span>
+    <span><i style="background:#58a6ff"></i>概念</span>
+    <span><i style="background:#f778ba"></i>技术</span>
+    <span><i style="background:#bc8cff"></i>产品</span>
+    <span><i style="background:#8b949e"></i>其它</span>
+  </div>
+</div>
+<div class="bar">
+  <button id="l-force" class="active">力导向 force</button>
+  <button id="l-circ">环形 circular</button>
+</div>
+<div id="chart"></div>
+<div id="detail"></div>
+
+<script>
+const COLOR={person:'#3fb950',org:'#d29922',concept:'#58a6ff',tech:'#f778ba',product:'#bc8cff',
+  location:'#8b949e',technique:'#a5d6ff',year:'#8b949e'};
+const KIND_CN={person:'人物',org:'组织',concept:'概念',tech:'技术',product:'产品',location:'地点',technique:'技术',year:'年份'};
+const $=id=>document.getElementById(id);
+let chart, catMap={}, allData;
+
+fetch('/graph?limit=300').then(r=>r.json()).then(d=>{
+  allData=d;
+  // 建立分类(按 kind)
+  const kinds=[]; d.nodes.forEach(n=>{if(!catMap[n.kind]){catMap[n.kind]=kinds.length;kinds.push(n.kind);}});
+  const cats=kinds.map(k=>({name:k,itemStyle:{color:COLOR[k]||'#8b949e'}}));
+  const data=d.nodes.map(n=>({id:'n'+n.id,name:n.name,category:catMap[n.kind],symbolSize:Math.min(14+n.degree*1.6,40),
+    itemStyle:{color:COLOR[n.kind]||'#8b949e'},value:n.degree}));
+  const links=d.edges.map(e=>({source:'n'+e.src_id,target:'n'+e.dst_id,value:e.relation,
+    label:{show:true,formatter:e.relation,fontSize:8,color:'#9aa5b1'}}));
+  chart=echarts.init($('chart'),'dark');
+  chart.setOption({
+    backgroundColor:'#0d1117',
+    tooltip:{trigger:'item',formatter:p=>p.dataType==='node'
+      ? `${p.data.name}<br/>类型: ${KIND_CN[kinds[p.data.category]]||kinds[p.data.category]}<br/>度数: ${p.data.value}`
+      : `${p.data.source} → ${p.data.target}: ${p.data.value}`},
+    legend:[{data:kinds.map(k=>({name:k,icon:'circle'})),textStyle:{color:'#8b949e'},top:8,
+      formatter:n=>`${KIND_CN[n]||n} (${catMap[n]})`}],
+    animationDuration:1500,animationEasingUpdate:'quinticInOut',
+    series:[{type:'graph',layout:'force',data,links,categories:cats,roam:true,draggable:true,
+      label:{show:true,position:'inside',fontSize:11,formatter:p=>p.data.name},
+      edgeSymbol:['circle','arrow'],edgeSymbolSize:[4,8],edgeLabel:{show:true,fontSize:8},
+      lineStyle:{color:'#4a5568',width:1.2,opacity:.7,curveness:.05},
+      force:{repulsion:180,edgeLength:120,draggedNodeTransfer:true},
+      emphasis:{focus:'adjacency',lineStyle:{width:3}}}
+  ]});
+  chart.on('click',p=>{if(p.dataType==='node')showDetail(p.data);});
+});
+function layout(type){
+  chart.setOption({series:[{layout:type==='circ'?'circular':'force',
+    force:type==='force'?{repulsion:180,edgeLength:120}:undefined,
+    circular:type==='circ'?{rotateLabel:true}:undefined}]});
+  chart.resize();
+}
+function showDetail(data){
+  const d=$('detail'); const id=data.id;
+  const rels=[];
+  allData.edges.forEach(e=>{
+    if('n'+e.src_id===id||'n'+e.dst_id===id){
+      const other=('n'+e.src_id===id)?('n'+e.dst_id):('n'+e.src_id);
+      const otherNode=allData.nodes.find(n=>'n'+n.id===other);
+      rels.push(`${e.relation} → ${otherNode?otherNode.name:other}`);
+    }
+  });
+  d.style.display='block';
+  d.innerHTML=`<span class="close" onclick="this.parentElement.style.display='none'">✕</span>
+    <h3>${data.name} （${KIND_CN[Object.keys(catMap)[data.category]]||'?'}）</h3>
+    <div class="cnt">关联 ${rels.length} 条</div>
+    ${rels.map(r=>`<div class="rel"><b>🔗</b> ${r}</div>`).join('')||'<div class="rel">暂无直接关联</div>'}`;
+}
+window.addEventListener('resize',()=>chart&&chart.resize());
+$('l-force').onclick=()=>{$('l-force').classList.add('active');$('l-circ').classList.remove('active');layout('force');};
+$('l-circ').onclick=()=>{$('l-circ').classList.add('active');$('l-force').classList.remove('active');layout('circ');};
+</script>
+</body>
+</html>
